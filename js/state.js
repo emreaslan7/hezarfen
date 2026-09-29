@@ -3,7 +3,7 @@ export const TOTAL_DISTANCE = 3300;
 export const STATE = {
   isLoading: true,
   started: false,
-  altitude: 153, // meters (top of Galata Tower)
+  altitude: 184.61, // meters (Galata Tower window sill)
   speed: 150, // km/h
   distanceLeft: TOTAL_DISTANCE,
   rollAngle: 0, // radians
@@ -39,11 +39,20 @@ export const UI = {
   camBox: document.getElementById('cam-box'),
   video: document.getElementById('webcam-video'),
   camCanvas: document.getElementById('cam-canvas'),
-  canvas3d: document.getElementById('canvas3d')
+  canvas3d: document.getElementById('canvas3d'),
+  impactFlash: document.getElementById('impact-flash'),
+  crashOverlay: document.getElementById('crash-overlay'),
+  crashIcon: document.getElementById('crash-icon'),
+  crashTitle: document.getElementById('crash-title'),
+  crashReason: document.getElementById('crash-reason'),
+  crashDistFlown: document.getElementById('crash-dist-flown'),
+  crashDistLeft: document.getElementById('crash-dist-left'),
+  btnRestart: document.getElementById('btn-restart')
 };
 
-export function updateHUD() {
-  UI.alt.innerText = `${Math.round(STATE.altitude)} m`;
+export function updateHUD(actualAlt) {
+  const displayAlt = (actualAlt !== undefined) ? actualAlt : STATE.altitude;
+  UI.alt.innerText = `${Math.round(displayAlt)} m`;
   UI.spd.innerText = `${Math.round(STATE.speed)} km/s`;
   UI.dist.innerText = `${Math.round(STATE.distanceLeft)} m`;
   const deg = Math.round((STATE.rollAngle * 180) / Math.PI);

@@ -6,9 +6,9 @@ export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb); // Sky blue
 scene.fog = new THREE.FogExp2(0xb8dcf5, 0.00008); // Very light distant atmospheric haze
 
-export const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 30000);
-camera.position.set(2.8, 155.0, 187.0);
-camera.lookAt(2.8, 155.0, 180.0);
+export const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 30000);
+camera.position.set(-14.07, 187.04, 182.47);
+camera.lookAt(-9.13, 186.21, 173.48);
 export const renderer = new THREE.WebGLRenderer({ canvas: UI.canvas3d, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -54,6 +54,7 @@ scene.add(water);
 
 // Load and display the 3D Istanbul Map Model directly as it is
 export let istanbulMap = null;
+export const terrainMeshes = [];
 const gltfLoader = new GLTFLoader();
 
 gltfLoader.load('./scenes/istanbul_map.glb', (gltf) => {
@@ -96,6 +97,7 @@ gltfLoader.load('./scenes/istanbul_map.glb', (gltf) => {
       return;
     }
     if (child.isMesh) {
+      terrainMeshes.push(child);
       child.receiveShadow = true;
       if (child.material) {
         if (child.material.map) {
@@ -179,20 +181,27 @@ export const landingMarker = new THREE.Mesh(
 landingMarker.position.set(0, 83.5, -3100);
 scene.add(landingMarker);
 
-// ==========================================
-// 3D REAL LANDMARKS (Yerleştirilen Gerçek 3D Modeller)
-// ==========================================
+// Asset Readiness Tracking for Loading Screen
+let markGalataReady, markHezarfenReady;
+export const assetsReadyPromise = new Promise((resolve) => {
+  let g = false, h = false;
+  const check = () => { if (g && h) resolve(); };
+  markGalataReady = () => { g = true; check(); };
+  markHezarfenReady = () => { h = true; check(); };
+});
+
 export const placedLandmarks = {};
 
 const landmarksToLoad = [
   {
     name: 'galata_tower',
-    file: 'galata_tower.glb',
+    file: 'galata_tower_opt.glb',
     pos: [-3, 85, 193],
     rotY_deg: 2,
     scale: 32.8,
     onLoaded: (group) => {
       towerGroup.visible = false; // Hide placeholder cylinder once high-res 3D model loads
+      markGalataReady();
     }
   },
   {
@@ -291,12 +300,15 @@ landmarksToLoad.forEach((item) => {
     console.log(`Landmark ${item.name} placed successfully at ${item.pos}!`);
   }, undefined, (err) => {
     console.error(`Failed to load landmark ${item.file}:`, err);
+    if (item.name === 'galata_tower') markGalataReady();
   });
 });
 
 // HEZARFEN GLIDER MODEL
 export const hezarfen = new THREE.Group();
-hezarfen.position.set(0, 153, 180);
+hezarfen.rotation.order = 'YXZ';
+hezarfen.position.set(-3.68, 184.61, 175.55);
+hezarfen.scale.set(1.7, 1.7, 1.7);
 scene.add(hezarfen);
 
 export const bones = {
@@ -417,10 +429,17 @@ export function updateRigMarkers(isPaired) {
 
 gltfLoader.load('./scenes/hezarfen.glb', (gltf) => {
   const model = gltf.scene;
-  model.scale.set(1.5, 1.5, 1.5);
+
+  // Normalize model pivot to bottom-center (exact match with editor.html)
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.x -= center.x;
+  model.position.z -= center.z;
+  model.position.y -= box.min.y;
+
   hezarfenModel = model;
   
-  // Initial showcase stance: upright standing, facing forward towards the camera
+  // Initial stance: upright standing, facing forward out the window
   model.rotation.set(0, Math.PI, 0);
 
   model.traverse((child) => {
@@ -446,6 +465,8 @@ gltfLoader.load('./scenes/hezarfen.glb', (gltf) => {
   });
   hezarfen.add(model);
   console.log('Hezarfen GLB loaded with bones!');
+  markHezarfenReady();
 }, undefined, (err) => {
   console.error('Failed to load Hezarfen GLB:', err);
+  markHezarfenReady();
 });

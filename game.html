@@ -47,7 +47,7 @@
     <div class="hud-stats">
       <div class="stat-item">
         <span class="stat-label">İrtifa</span>
-        <span class="stat-val alt" id="val-alt">153 m</span>
+        <span class="stat-val alt" id="val-alt">185 m</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Hız</span>
@@ -121,8 +121,30 @@
     </div>
   </div>
 
+  <div id="impact-flash"></div>
+
+  <!-- Crash / Game Over Overlay -->
+  <div id="crash-overlay" style="display: none;">
+    <div class="crash-card">
+      <div class="crash-icon" id="crash-icon">🌊</div>
+      <h2 class="crash-title" id="crash-title">BOĞAZ'A ÇAKILDIN!</h2>
+      <p class="crash-reason" id="crash-reason">Boğaz'ın serin sularına düştün. Daha fazla kanat çırpmalı veya süzülmeliydin.</p>
+      <div class="crash-stats">
+        <div class="stat-box">
+          <span class="lbl">Katedilen Mesafe</span>
+          <span class="val" id="crash-dist-flown">0 m</span>
+        </div>
+        <div class="stat-box">
+          <span class="lbl">Kalan Mesafe</span>
+          <span class="val" id="crash-dist-left">3.300 m</span>
+        </div>
+      </div>
+      <button class="btn-start" id="btn-restart">🔄 YENİDEN BAŞLA (R)</button>
+    </div>
+  </div>
+
   <canvas id="canvas3d"></canvas>
 
-  <script type="module" src="js/main.js?v=206"></script>
+  <script type="module" src="js/main.js?v=228"></script>
 </body>
 </html>

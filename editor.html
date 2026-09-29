@@ -174,13 +174,14 @@
     <div>
       <div class="section-title">1. Düzenlenecek Modeli Seç</div>
       <select id="model-select">
+        <option value="hezarfen" selected>🪽 Hezarfen Ahmet Çelebi (hezarfen.glb)</option>
+        <option value="galata_tower">🗼 Galata Kulesi (galata_tower_opt.glb - 64MB)</option>
         <option value="vodafone-arena">🏟️ Vodafone Park (vodafone-arena.glb)</option>
         <option value="maidens_tower">🏰 Kız Kulesi (maidens_tower.glb)</option>
         <option value="dolmabahce">🏛️ Dolmabahçe (dolmabahce.glb)</option>
         <option value="topkapi">🕌 Topkapı Sarayı (topkapi.glb)</option>
         <option value="vapur">🚢 Şehir Hatları Vapuru (vapur.glb)</option>
         <option value="vapur_2">⛴️ Vapur 2 (vapur_2.glb)</option>
-        <option value="galata_tower">🗼 Galata Kulesi (galata_tower.glb - 437MB)</option>
       </select>
       <div style="display: flex; gap: 6px; margin-top: 8px;">
         <button class="action-btn" id="btn-add-vapur2" style="background: #0284c7; color: #fff; padding: 8px 10px; font-size: 12px; flex: 2; border-radius: 6px; cursor: pointer;">
@@ -202,8 +203,9 @@
       </div>
     </div>
 
-    <!-- Quick Map Placement -->
+    <!-- Quick Focus & Map Placement -->
     <div>
+      <button class="action-btn btn-jump" id="btn-focus-galata" style="background: #8b5cf6; margin-bottom: 6px;">🗼 Galata / Hezarfen'e Yaklaş & Odaklan</button>
       <button class="action-btn btn-jump" id="btn-place-mode">🎯 Haritaya Tıklayarak Konumlandır: KAPALI</button>
     </div>
 
@@ -213,20 +215,20 @@
       
       <div class="grid-row">
         <span class="grid-label">X:</span>
-        <input type="range" id="slider-x" min="-4000" max="4000" step="1">
-        <input type="number" id="num-x" step="1">
+        <input type="range" id="slider-x" min="-4000" max="4000" step="0.1">
+        <input type="number" id="num-x" step="0.1">
       </div>
 
       <div class="grid-row">
         <span class="grid-label">Y:</span>
-        <input type="range" id="slider-y" min="-10" max="350" step="1">
-        <input type="number" id="num-y" step="1">
+        <input type="range" id="slider-y" min="-10" max="350" step="0.1">
+        <input type="number" id="num-y" step="0.1">
       </div>
 
       <div class="grid-row">
         <span class="grid-label">Z:</span>
-        <input type="range" id="slider-z" min="-5000" max="2500" step="1">
-        <input type="number" id="num-z" step="1">
+        <input type="range" id="slider-z" min="-5000" max="2500" step="0.1">
+        <input type="number" id="num-z" step="0.1">
       </div>
 
       <div class="grid-row">
@@ -237,17 +239,29 @@
 
       <div class="grid-row">
         <span class="grid-label">Ölç:</span>
-        <input type="range" id="slider-scale" min="0.01" max="150" step="0.1">
-        <input type="number" id="num-scale" min="0.001" step="0.1">
+        <input type="range" id="slider-scale" min="0.01" max="150" step="0.05">
+        <input type="number" id="num-scale" min="0.001" step="0.05">
       </div>
     </div>
 
-    <!-- Export & Copy -->
+    <!-- Export & Copy Objects -->
     <div>
-      <div class="section-title">4. Ayarlanan Veriler</div>
+      <div class="section-title">4. Ayarlanan Obje Verileri</div>
       <div class="export-box" id="export-text">Veriler burada toplanacak...</div>
       <div style="margin-top: 8px;">
-        <button class="action-btn btn-copy" id="btn-copy">📋 Tüm Verileri Kopyala</button>
+        <button class="action-btn btn-copy" id="btn-copy">📋 Tüm Obje Verilerini Kopyala</button>
+      </div>
+    </div>
+
+    <!-- Live Camera Coordinates & Copy -->
+    <div>
+      <div class="section-title">🎥 5. Aktif Kamera Açısı (Görüş Noktası)</div>
+      <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+        Fare ile kamerayı istediğin açıya getir (Sol Tık: Döndür, Sağ Tık: Kaydır, Tekerlek: Zoom).
+      </div>
+      <div class="export-box" id="cam-export-text" style="max-height: 85px; color: #38bdf8;">Kamera verisi hesaplanıyor...</div>
+      <div style="margin-top: 6px;">
+        <button class="action-btn" id="btn-copy-cam" style="background: #8b5cf6; color: #fff;">📸 Sadece Kamera Açısını Kopyala</button>
       </div>
     </div>
   </div>
@@ -268,6 +282,8 @@
     const statusBox = document.getElementById('status-box');
     const modelSelect = document.getElementById('model-select');
     const exportText = document.getElementById('export-text');
+    const camExportText = document.getElementById('cam-export-text');
+    const btnCopyCam = document.getElementById('btn-copy-cam');
     const btnPlaceMode = document.getElementById('btn-place-mode');
     const btnCopy = document.getElementById('btn-copy');
     const btnAddVapur2 = document.getElementById('btn-add-vapur2');
@@ -291,8 +307,8 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
 
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 40000);
-    camera.position.set(0, 1200, 1600);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 40000);
+    camera.position.set(-14.07, 187.04, 182.47);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -306,7 +322,26 @@
     orbit.enableDamping = true;
     orbit.dampingFactor = 0.08;
     orbit.maxDistance = 25000;
-    orbit.target.set(0, 85, 200);
+    orbit.target.set(-9.13, 186.21, 173.48);
+
+    function updateCameraExport() {
+      if (!camExportText) return;
+      const camData = {
+        cameraPos: [
+          Number(camera.position.x.toFixed(2)),
+          Number(camera.position.y.toFixed(2)),
+          Number(camera.position.z.toFixed(2))
+        ],
+        cameraLookAt: [
+          Number(orbit.target.x.toFixed(2)),
+          Number(orbit.target.y.toFixed(2)),
+          Number(orbit.target.z.toFixed(2))
+        ]
+      };
+      camExportText.innerText = JSON.stringify(camData, null, 2);
+    }
+    orbit.addEventListener('change', updateCameraExport);
+    updateCameraExport();
 
     // Transform Controls (Gizmo)
     const transformControl = new TransformControls(camera, renderer.domElement);
@@ -333,16 +368,17 @@
 
     // Storage for placed objects (pre-populated with user coordinates)
     const modelsData = {
+      'hezarfen':       { file: 'hezarfen.glb',       group: null, defaultScale: 1.7, initialPos: [-3.68, 184.61, 175.55], initialRotY: 180 },
+      'galata_tower':   { file: 'galata_tower_opt.glb', group: null, defaultScale: 32.8, initialPos: [-3, 85, 193], initialRotY: 2 },
       'vodafone-arena': { file: 'vodafone-arena.glb', group: null, defaultScale: 1.01, initialPos: [-1813, 29, -1133], initialRotY: 280 },
       'maidens_tower':  { file: 'maidens_tower.glb',  group: null, defaultScale: 10.5, initialPos: [-70, -28, -2322], initialRotY: 203 },
       'dolmabahce':     { file: 'dolmabahce.glb',     group: null, defaultScale: 0.6, initialPos: [-1758, 284, -1776], initialRotY: 103 },
       'topkapi':        { file: 'topkapi.glb',        group: null, defaultScale: 1.0, initialPos: [-900, 60, -900], initialRotY: 0 },
       'vapur':          { file: 'vapur.glb',          group: null, defaultScale: 1.5, initialPos: [110, -1, -1595], initialRotY: 27 },
-      'vapur_2':        { file: 'vapur_2.glb',        group: null, defaultScale: 40.3, initialPos: [-473, -1, -1632], initialRotY: 88 },
-      'galata_tower':   { file: 'galata_tower.glb',   group: null, defaultScale: 32.8, initialPos: [-3, 85, 193], initialRotY: 2 }
+      'vapur_2':        { file: 'vapur_2.glb',        group: null, defaultScale: 40.3, initialPos: [-473, -1, -1632], initialRotY: 88 }
     };
 
-    let activeKey = 'vodafone-arena';
+    let activeKey = 'hezarfen';
     let clickToPlaceMode = false;
     let terrainMesh = null;
 
@@ -566,6 +602,29 @@
       if (e.key === 'r' || e.key === 'R') setGizmoMode('scale');
     });
 
+    // Focus Galata / Hezarfen Button
+    const btnFocusGalata = document.getElementById('btn-focus-galata');
+    if (btnFocusGalata) {
+      btnFocusGalata.addEventListener('click', () => {
+        modelSelect.value = 'hezarfen';
+        selectModel('hezarfen');
+        orbit.target.set(-9.13, 186.21, 173.48);
+        camera.position.set(-14.07, 187.04, 182.47);
+        orbit.update();
+        updateCameraExport();
+      });
+    }
+
+    // Copy Camera Coordinates Button
+    if (btnCopyCam) {
+      btnCopyCam.addEventListener('click', () => {
+        const text = camExportText.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Kamera konumu ve hedefi panoya kopyalandı! Şimdi sohbete yapıştırabilirsin:\n\n' + text);
+        });
+      });
+    }
+
     // Click to Place Mode
     btnPlaceMode.addEventListener('click', () => {
       clickToPlaceMode = !clickToPlaceMode;
@@ -604,9 +663,9 @@
       if (!item || !item.group) return;
 
       const p = item.group.position;
-      sliderX.value = numX.value = Math.round(p.x);
-      sliderY.value = numY.value = Math.round(p.y);
-      sliderZ.value = numZ.value = Math.round(p.z);
+      sliderX.value = numX.value = Number(p.x.toFixed(2));
+      sliderY.value = numY.value = Number(p.y.toFixed(2));
+      sliderZ.value = numZ.value = Number(p.z.toFixed(2));
 
       const deg = Math.round((item.group.rotation.y * 180 / Math.PI) % 360 + 360) % 360;
       sliderRot.value = numRot.value = deg;
@@ -653,9 +712,9 @@
           const deg = Math.round((item.group.rotation.y * 180 / Math.PI) % 360 + 360) % 360;
           result[k] = {
             pos: [
-              Math.round(item.group.position.x),
-              Math.round(item.group.position.y),
-              Math.round(item.group.position.z)
+              Number(item.group.position.x.toFixed(2)),
+              Number(item.group.position.y.toFixed(2)),
+              Number(item.group.position.z.toFixed(2))
             ],
             rotY_deg: deg,
             scale: Number(item.group.scale.x.toFixed(2))

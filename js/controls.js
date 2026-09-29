@@ -1,5 +1,7 @@
 import { STATE, UI } from './state.js';
 import { poseState, startCamera } from './pose.js';
+import { assetsReadyPromise } from './scene.js';
+import { initWindAudio } from './audio.js';
 
 export const controls = {
   keys: {},
@@ -11,6 +13,7 @@ export const controls = {
 
 // Start Flight Handler
 export async function startGame(useCamera = false) {
+  initWindAudio();
   UI.overlay.classList.add('hidden');
   if (UI.hud) UI.hud.style.display = 'flex';
   if (UI.toast) UI.toast.style.display = 'block';
@@ -33,6 +36,8 @@ export async function startGame(useCamera = false) {
   }
 
   STATE.started = true;
+  STATE.flapImpulse = 5.0; // Strong initial takeoff leap into the wind
+  STATE.flapTime = 0.52;   // Triggers fluid organic wing flap on leap off balcony
 }
 
 // Menu Action Listeners
@@ -121,17 +126,25 @@ if (UI.calibStartBtn) {
 
 if (UI.btnKeyboardMode) {
   UI.btnKeyboardMode.addEventListener('click', () => {
-    startGame(false);
+    if (UI.overlay) UI.overlay.classList.add('hidden');
+    if (UI.hud) UI.hud.style.display = 'flex';
+    if (UI.toast) {
+      UI.toast.innerText = "🗼 GALATA PENCERESİNDESİN • UÇUŞU BAŞLATMAK İÇİN [SPACE] TUŞUNA BAS!";
+      UI.toast.style.display = 'block';
+    }
   });
 }
 
-// Auto-start flight or calibration after 5 seconds loading
+// Smooth loading: minimum 2.0s + wait for assets, with a strict 3.8s timeout so it NEVER hangs
 const urlParams = new URLSearchParams(window.location.search);
 const initialMode = urlParams.get('mode');
+const minTimer = new Promise((resolve) => setTimeout(resolve, 2000));
+const maxTimer = new Promise((resolve) => setTimeout(resolve, 3800));
 
-const LOADING_DURATION_MS = 5000;
-
-setTimeout(() => {
+Promise.race([
+  Promise.all([minTimer, assetsReadyPromise]),
+  maxTimer
+]).then(() => {
   STATE.isLoading = false;
   const loader = document.getElementById('loading-screen');
   if (loader) {
@@ -142,11 +155,16 @@ setTimeout(() => {
   }
 
   if (initialMode === 'keyboard') {
-    startGame(false);
+    if (UI.overlay) UI.overlay.classList.add('hidden');
+    if (UI.hud) UI.hud.style.display = 'flex';
+    if (UI.toast) {
+      UI.toast.innerText = "🗼 GALATA PENCERESİNDESİN • UÇUŞU BAŞLATMAK İÇİN [SPACE] TUŞUNA BAS!";
+      UI.toast.style.display = 'block';
+    }
   } else if (initialMode === 'camera') {
     if (UI.btnCameraMode) UI.btnCameraMode.click();
   }
-}, LOADING_DURATION_MS);
+});
 
 // Keyboard controls
 window.addEventListener('keydown', (e) => {
@@ -184,7 +202,9 @@ window.addEventListener('keydown', (e) => {
       }
     }
   } else if (e.code === 'Space' && STATE.started && !poseState.active) {
-    triggerWingFlap(6.2);
+    if (!e.repeat) {
+      triggerWingFlap(6.2);
+    }
   }
 
   if (e.code === 'KeyR' && !poseState.active) {
@@ -206,6 +226,6 @@ window.addEventListener('mousemove', (e) => {
 
 export function triggerWingFlap(impulse = 6.2) {
   STATE.flapImpulse = impulse;
-  STATE.flapTime = 0.45;
+  STATE.flapTime = 0.52;
   UI.toast.innerText = `🦅 KANAT ÇIRPIŞI: +${impulse.toFixed(1)} m/s KALDIRMA!`;
 }
