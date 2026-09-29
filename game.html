@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hezarfen: Galata'dan Üsküdar'a - Uçuş Simülasyonu</title>
+  
+  <!-- Google Fonts: Schoolbell -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css?v=206">
+
+  <!-- MediaPipe Pose & Camera Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  
+  <!-- Three.js Module Import -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Simple 5s Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-text">loading...</div>
+    <div class="loading-bar"><div class="loading-fill"></div></div>
+  </div>
+
+  <!-- Flight HUD -->
+  <div id="hud" style="display: none;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+      <div>
+        <div class="hud-title">Hezarfen 1632</div>
+        <div class="hud-subtitle">Galata Kulesi ➔ Üsküdar Doğancılar</div>
+      </div>
+      <a href="/" class="btn-hud-exit">‹ ANA SAYFA</a>
+    </div>
+
+    <div class="hud-stats">
+      <div class="stat-item">
+        <span class="stat-label">İrtifa</span>
+        <span class="stat-val alt" id="val-alt">153 m</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Hız</span>
+        <span class="stat-val" id="val-spd">150 km/s</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Mesafe</span>
+        <span class="stat-val dist" id="val-dist">3300 m</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Yatış</span>
+        <span class="stat-val" id="val-roll">0°</span>
+        <div id="attitude-bar"><div id="attitude-fill"></div></div>
+      </div>
+    </div>
+    <div style="font-size: 11px; color: #8b949e; background: rgba(13,17,23,0.85); padding: 6px 12px; border-radius: 4px; border: 1px solid #30363d; margin-top: 2px;">
+      [A/D] YATIŞ &nbsp;|&nbsp; [W/S] DALIŞ/TIRMANIŞ &nbsp;|&nbsp; [SPACE] KANAT ÇIRP &nbsp;|&nbsp; [MOUSE] ETRAFA BAK &nbsp;|&nbsp; [R] SIFIRLA
+    </div>
+  </div>
+
+  <div id="status-toast" style="display: none;"></div>
+
+  <div id="cam-box">
+    <video id="webcam-video" playsinline muted autoplay style="position: fixed; top: -9999px; left: -9999px; width: 640px; height: 480px; opacity: 0; pointer-events: none;"></video>
+    <canvas id="cam-canvas"></canvas>
+    <div id="cam-live-label">CANLI GÖVDE</div>
+  </div>
+
+  <!-- Calibration / Mode Selection Overlay -->
+  <div id="overlay">
+    <div class="menu-container">
+      <!-- Panel 1: Mode Selection (if opened directly without ?mode=) -->
+      <div id="briefing-panel">
+        <div class="hero-tag">1632 • İSTANBUL</div>
+        <p class="hero-desc">Galata Kulesi ➔ Üsküdar Doğancılar (3.300 m)</p>
+        <div class="menu-actions">
+          <button class="btn-start btn-hero" id="btn-camera-mode">🦅 HEZARFEN GİBİ UÇ (KAMERA İLE)</button>
+          <button class="btn-secondary" id="btn-keyboard-mode">⌨️ KLAVYE İLE UÇ (SPACE)</button>
+        </div>
+      </div>
+
+      <!-- Panel 2: Camera Test & Upper Body Calibration -->
+      <div id="calib-panel" style="display: none;">
+        <div class="calib-header">
+          <h2>🦅 Kamera & Gövde Ayarı</h2>
+          <div class="calib-subdesc">Kameraya geçin ve kollarınızı iki yana açarak Hezarfen duruşunu alın.</div>
+        </div>
+        <div class="calib-feed-container">
+          <canvas id="calib-canvas"></canvas>
+          <div class="calib-crosshair"></div>
+        </div>
+        <div class="calib-status-grid">
+          <div class="status-badge" id="badge-shoulders">
+            <span class="dot"></span> <span>Omuzlar: Bekleniyor...</span>
+          </div>
+          <div class="status-badge" id="badge-arms">
+            <span class="dot"></span> <span>Kanatlar: Bekleniyor...</span>
+          </div>
+          <div class="status-badge" id="badge-roll">
+            <span class="dot"></span> <span>Duruş: 0°</span>
+          </div>
+          <div class="status-badge" id="badge-status">
+            <span class="dot"></span> <span>Duruş: Bekleniyor</span>
+          </div>
+        </div>
+        <div class="calib-actions">
+          <button class="btn-back" id="calib-back-btn">‹ Geri</button>
+          <button class="btn-start" id="calib-start-btn" disabled>DURUŞ BEKLENİYOR...</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="canvas3d"></canvas>
+
+  <script type="module" src="js/main.js?v=206"></script>
+</body>
+</html>

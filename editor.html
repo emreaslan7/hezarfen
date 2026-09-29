@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D İstanbul Harita & Obje Editörü</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #0f141c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
+    h1 { font-family: 'Schoolbell', cursive, sans-serif; font-size: 22px; letter-spacing: 1px; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
+    #canvas-container { width: 100%; height: 100%; }
+
+    /* Top/Left Floating Panel */
+    #editor-panel {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 380px;
+      max-height: calc(100vh - 32px);
+      background: rgba(18, 24, 34, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      z-index: 100;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .subtitle { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #38bdf8;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+
+    /* Model Select */
+    select, input[type="number"] {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: #38bdf8; }
+
+    /* Transform Mode Buttons */
+    .btn-group { display: flex; gap: 6px; }
+    .btn-mode {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #cbd5e1;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-mode.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+
+    /* Sliders / Inputs Grid */
+    .grid-row {
+      display: grid;
+      grid-template-columns: 24px 1fr 65px;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .grid-label { font-weight: 700; color: #94a3b8; }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    /* Status & Loading */
+    #status-box {
+      font-size: 11px;
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+
+    /* Output Box */
+    .export-box {
+      background: #0b0f17;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #4ade80;
+      max-height: 140px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Action Buttons */
+    .action-btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-copy { background: #10b981; color: #fff; }
+    .btn-copy:hover { background: #059669; }
+    .btn-jump { background: #3b82f6; color: #fff; margin-bottom: 6px; }
+    .btn-jump:hover { background: #2563eb; }
+
+    #hint-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(18, 24, 34, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #94a3b8;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div id="editor-panel">
+    <h1>🏛️ 3D Obje & Harita Editörü</h1>
+    <div class="subtitle">Modelleri harita üzerine yerleştir, oklarla taşı, döndür ve boyutlandır.</div>
+
+    <div id="status-box">Harita ve modeller yükleniyor...</div>
+
+    <!-- Model Select -->
+    <div>
+      <div class="section-title">1. Düzenlenecek Modeli Seç</div>
+      <select id="model-select">
+        <option value="vodafone-arena">🏟️ Vodafone Park (vodafone-arena.glb)</option>
+        <option value="maidens_tower">🏰 Kız Kulesi (maidens_tower.glb)</option>
+        <option value="dolmabahce">🏛️ Dolmabahçe (dolmabahce.glb)</option>
+        <option value="topkapi">🕌 Topkapı Sarayı (topkapi.glb)</option>
+        <option value="vapur">🚢 Şehir Hatları Vapuru (vapur.glb)</option>
+        <option value="vapur_2">⛴️ Vapur 2 (vapur_2.glb)</option>
+        <option value="galata_tower">🗼 Galata Kulesi (galata_tower.glb - 437MB)</option>
+      </select>
+      <div style="display: flex; gap: 6px; margin-top: 8px;">
+        <button class="action-btn" id="btn-add-vapur2" style="background: #0284c7; color: #fff; padding: 8px 10px; font-size: 12px; flex: 2; border-radius: 6px; cursor: pointer;">
+          ⛴️ ➕ Yeni Vapur 2 Ekle
+        </button>
+        <button class="action-btn" id="btn-del-vapur2" style="background: #ef4444; color: #fff; padding: 8px 10px; font-size: 12px; flex: 1; border-radius: 6px; cursor: pointer; display: none;">
+          🗑️ Sil
+        </button>
+      </div>
+    </div>
+
+    <!-- Gizmo Mode -->
+    <div>
+      <div class="section-title">2. Kontrol Aracı (Gizmo)</div>
+      <div class="btn-group">
+        <button class="btn-mode active" id="btn-translate">[W] Taşı</button>
+        <button class="btn-mode" id="btn-rotate">[E] Döndür</button>
+        <button class="btn-mode" id="btn-scale">[R] Boyutlandır</button>
+      </div>
+    </div>
+
+    <!-- Quick Map Placement -->
+    <div>
+      <button class="action-btn btn-jump" id="btn-place-mode">🎯 Haritaya Tıklayarak Konumlandır: KAPALI</button>
+    </div>
+
+    <!-- Fine Tuning Sliders -->
+    <div>
+      <div class="section-title">3. İnce Ayarlar (Konum, Yön, Boyut)</div>
+      
+      <div class="grid-row">
+        <span class="grid-label">X:</span>
+        <input type="range" id="slider-x" min="-4000" max="4000" step="1">
+        <input type="number" id="num-x" step="1">
+      </div>
+
+      <div class="grid-row">
+        <span class="grid-label">Y:</span>
+        <input type="range" id="slider-y" min="-10" max="350" step="1">
+        <input type="number" id="num-y" step="1">
+      </div>
+
+      <div class="grid-row">
+        <span class="grid-label">Z:</span>
+        <input type="range" id="slider-z" min="-5000" max="2500" step="1">
+        <input type="number" id="num-z" step="1">
+      </div>
+
+      <div class="grid-row">
+        <span class="grid-label">Yön:</span>
+        <input type="range" id="slider-rot" min="0" max="360" step="1">
+        <input type="number" id="num-rot" min="0" max="360" step="1">
+      </div>
+
+      <div class="grid-row">
+        <span class="grid-label">Ölç:</span>
+        <input type="range" id="slider-scale" min="0.01" max="150" step="0.1">
+        <input type="number" id="num-scale" min="0.001" step="0.1">
+      </div>
+    </div>
+
+    <!-- Export & Copy -->
+    <div>
+      <div class="section-title">4. Ayarlanan Veriler</div>
+      <div class="export-box" id="export-text">Veriler burada toplanacak...</div>
+      <div style="margin-top: 8px;">
+        <button class="action-btn btn-copy" id="btn-copy">📋 Tüm Verileri Kopyala</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint-bar">
+    🖱️ <b>Sol Tık:</b> Kamera Döndür &nbsp;|&nbsp; <b>Sağ Tık:</b> Kamera Kaydır &nbsp;|&nbsp; <b>Tekerlek:</b> Yakınlaş &nbsp;|&nbsp; <b>Gizmo Okları:</b> Modeli Taşı/Döndür
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { TransformControls } from 'three/addons/controls/TransformControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    const container = document.getElementById('canvas-container');
+    const statusBox = document.getElementById('status-box');
+    const modelSelect = document.getElementById('model-select');
+    const exportText = document.getElementById('export-text');
+    const btnPlaceMode = document.getElementById('btn-place-mode');
+    const btnCopy = document.getElementById('btn-copy');
+    const btnAddVapur2 = document.getElementById('btn-add-vapur2');
+    const btnDelVapur2 = document.getElementById('btn-del-vapur2');
+    let vapur2Template = null;
+    let vapur2Count = 1;
+
+    // Gizmo mode buttons
+    const btnTranslate = document.getElementById('btn-translate');
+    const btnRotate = document.getElementById('btn-rotate');
+    const btnScale = document.getElementById('btn-scale');
+
+    // Inputs
+    const sliderX = document.getElementById('slider-x'), numX = document.getElementById('num-x');
+    const sliderY = document.getElementById('slider-y'), numY = document.getElementById('num-y');
+    const sliderZ = document.getElementById('slider-z'), numZ = document.getElementById('num-z');
+    const sliderRot = document.getElementById('slider-rot'), numRot = document.getElementById('num-rot');
+    const sliderScale = document.getElementById('slider-scale'), numScale = document.getElementById('num-scale');
+
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 40000);
+    camera.position.set(0, 1200, 1600);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    container.appendChild(renderer.domElement);
+
+    // Orbit Controls
+    const orbit = new OrbitControls(camera, renderer.domElement);
+    orbit.enableDamping = true;
+    orbit.dampingFactor = 0.08;
+    orbit.maxDistance = 25000;
+    orbit.target.set(0, 85, 200);
+
+    // Transform Controls (Gizmo)
+    const transformControl = new TransformControls(camera, renderer.domElement);
+    transformControl.size = 0.85;
+    scene.add(transformControl);
+
+    transformControl.addEventListener('dragging-changed', (e) => {
+      orbit.enabled = !e.value;
+    });
+
+    transformControl.addEventListener('change', () => {
+      syncUIFromActiveModel();
+      updateExportText();
+    });
+
+    // Lights
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 1.4);
+    hemiLight.position.set(0, 1000, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfff8ee, 2.2);
+    dirLight.position.set(-800, 1500, -400);
+    scene.add(dirLight);
+
+    // Storage for placed objects (pre-populated with user coordinates)
+    const modelsData = {
+      'vodafone-arena': { file: 'vodafone-arena.glb', group: null, defaultScale: 1.01, initialPos: [-1813, 29, -1133], initialRotY: 280 },
+      'maidens_tower':  { file: 'maidens_tower.glb',  group: null, defaultScale: 10.5, initialPos: [-70, -28, -2322], initialRotY: 203 },
+      'dolmabahce':     { file: 'dolmabahce.glb',     group: null, defaultScale: 0.6, initialPos: [-1758, 284, -1776], initialRotY: 103 },
+      'topkapi':        { file: 'topkapi.glb',        group: null, defaultScale: 1.0, initialPos: [-900, 60, -900], initialRotY: 0 },
+      'vapur':          { file: 'vapur.glb',          group: null, defaultScale: 1.5, initialPos: [110, -1, -1595], initialRotY: 27 },
+      'vapur_2':        { file: 'vapur_2.glb',        group: null, defaultScale: 40.3, initialPos: [-473, -1, -1632], initialRotY: 88 },
+      'galata_tower':   { file: 'galata_tower.glb',   group: null, defaultScale: 32.8, initialPos: [-3, 85, 193], initialRotY: 2 }
+    };
+
+    let activeKey = 'vodafone-arena';
+    let clickToPlaceMode = false;
+    let terrainMesh = null;
+
+    const gltfLoader = new GLTFLoader();
+
+    // 1. Load Aligned 3D Istanbul Map
+    statusBox.innerText = 'İstanbul Haritası yükleniyor...';
+    gltfLoader.load('./scenes/istanbul_map.glb', (gltf) => {
+      const map = gltf.scene;
+
+      // Remove Adornments
+      const adorn = map.getObjectByName('Adornments');
+      if (adorn && adorn.parent) adorn.parent.remove(adorn);
+
+      map.traverse((child) => {
+        if (child.name.includes('Adornment')) child.visible = false;
+        if (child.isMesh) {
+          terrainMesh = child;
+          child.material.transparent = false;
+          child.material.opacity = 1.0;
+          child.material.side = THREE.DoubleSide;
+        }
+      });
+
+      // EXACT USER-PICKED ALIGNMENT
+      const RAW_GALATA_X = -1790.0, RAW_GALATA_Z = 1023.8;
+      const RAW_DOGAN_X = 2587.7, RAW_DOGAN_Z = 2014.7;
+      const vx = RAW_DOGAN_X - RAW_GALATA_X;
+      const vz = RAW_DOGAN_Z - RAW_GALATA_Z;
+      const mapDist = Math.hypot(vx, vz);
+      const MAP_SCALE = 3300.0 / mapDist;
+      const MAP_ROTY = Math.atan2(vx, -vz);
+
+      const mapPivot = new THREE.Group();
+      scene.add(mapPivot);
+
+      map.position.set(-RAW_GALATA_X, 0, -RAW_GALATA_Z);
+      mapPivot.add(map);
+
+      mapPivot.rotation.y = MAP_ROTY;
+      mapPivot.scale.set(MAP_SCALE, MAP_SCALE, MAP_SCALE);
+      mapPivot.position.set(0, 0, 200);
+
+      statusBox.innerText = '✓ Harita yüklendi. Modeller yükleniyor...';
+      loadAllCustomModels();
+    });
+
+    // 2. Load all available GLB models into the scene
+    function loadAllCustomModels() {
+      const keys = Object.keys(modelsData);
+      let loadedCount = 0;
+
+      keys.forEach((k) => {
+        const item = modelsData[k];
+        gltfLoader.load(
+          `./scenes/${item.file}`,
+          (gltf) => {
+            const raw = gltf.scene;
+
+            // Normalize model pivot to bottom-center
+            const box = new THREE.Box3().setFromObject(raw);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+
+            raw.position.x -= center.x;
+            raw.position.z -= center.z;
+            raw.position.y -= box.min.y; // Sits flat on ground at y=0
+
+            const wrapper = new THREE.Group();
+            wrapper.name = `wrapper_${k}`;
+            wrapper.add(raw);
+
+            // Default scale
+            wrapper.scale.set(item.defaultScale, item.defaultScale, item.defaultScale);
+            wrapper.position.set(item.initialPos[0], item.initialPos[1], item.initialPos[2]);
+            if (item.initialRotY !== undefined) {
+              wrapper.rotation.y = (item.initialRotY * Math.PI) / 180;
+            }
+
+            if (k === 'vapur_2') {
+              vapur2Template = raw.clone();
+            }
+
+            scene.add(wrapper);
+            item.group = wrapper;
+
+            loadedCount++;
+            statusBox.innerText = `Yükleniyor: ${loadedCount}/${keys.length} (${item.file})`;
+
+            if (k === activeKey) {
+              selectModel(k);
+            }
+
+            if (loadedCount === keys.length) {
+              statusBox.innerText = '✓ Tüm modeller hazır! Düzenlemeye başlayabilirsin.';
+              statusBox.style.color = '#10b981';
+              statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
+              updateExportText();
+            }
+          },
+          (progress) => {
+            if (progress.total > 0 && item.file.includes('galata')) {
+              statusBox.innerText = `Galata Kulesi (437MB) yükleniyor: %${Math.round((progress.loaded / progress.total) * 100)}`;
+            }
+          },
+          (err) => {
+            console.warn(`Could not load ${item.file}:`, err);
+            loadedCount++;
+          }
+        );
+      });
+    }
+
+    function selectModel(key) {
+      activeKey = key;
+      const item = modelsData[key];
+      if (item && item.group) {
+        transformControl.attach(item.group);
+        syncUIFromActiveModel();
+
+        // Focus camera gently towards the object
+        orbit.target.lerp(item.group.position, 0.75);
+      }
+
+      // Show/hide delete button for added instances
+      if (btnDelVapur2) {
+        btnDelVapur2.style.display = key.startsWith('vapur_2_') ? 'block' : 'none';
+      }
+    }
+
+    modelSelect.addEventListener('change', (e) => {
+      selectModel(e.target.value);
+    });
+
+    // Add and Delete Vapur 2 Instances
+    function addVapur2Instance() {
+      if (!vapur2Template) {
+        alert('Vapur 2 modeli henüz yükleniyor, lütfen birkaç saniye bekleyin...');
+        return;
+      }
+      vapur2Count++;
+      const newKey = `vapur_2_${vapur2Count}`;
+
+      const raw = vapur2Template.clone(true);
+      const wrapper = new THREE.Group();
+      wrapper.name = `wrapper_${newKey}`;
+      wrapper.add(raw);
+
+      // Offset slightly from active object or base vapur
+      const currentObj = modelsData[activeKey]?.group;
+      const basePos = currentObj ? currentObj.position : new THREE.Vector3(-245, 24, -1665);
+      wrapper.position.set(basePos.x + 80, basePos.y, basePos.z + 80);
+      const baseScale = currentObj ? currentObj.scale.x : 1.0;
+      wrapper.scale.set(baseScale, baseScale, baseScale);
+      if (currentObj) wrapper.rotation.y = currentObj.rotation.y;
+
+      scene.add(wrapper);
+
+      modelsData[newKey] = {
+        file: 'vapur_2.glb',
+        group: wrapper,
+        defaultScale: baseScale,
+        initialPos: [wrapper.position.x, wrapper.position.y, wrapper.position.z],
+        isInstance: true
+      };
+
+      // Add to select dropdown
+      const opt = document.createElement('option');
+      opt.value = newKey;
+      opt.innerText = `⛴️ Vapur 2 (#${vapur2Count})`;
+      modelSelect.appendChild(opt);
+
+      modelSelect.value = newKey;
+      selectModel(newKey);
+      updateExportText();
+
+      statusBox.innerText = `✓ Yeni Vapur 2 (#${vapur2Count}) eklendi! Taşımak için gizmo oklarını kullanabilir veya haritaya tıklayabilirsiniz.`;
+      statusBox.style.color = '#38bdf8';
+    }
+
+    function deleteActiveVapur2() {
+      if (!activeKey.startsWith('vapur_2_')) {
+        alert('Sadece sonradan eklenen Vapur 2 kopyalarını silebilirsiniz.');
+        return;
+      }
+      const item = modelsData[activeKey];
+      if (item && item.group) {
+        transformControl.detach();
+        scene.remove(item.group);
+        delete modelsData[activeKey];
+
+        const opt = modelSelect.querySelector(`option[value="${activeKey}"]`);
+        if (opt) opt.remove();
+
+        modelSelect.value = 'vapur_2';
+        selectModel('vapur_2');
+        updateExportText();
+        statusBox.innerText = 'Kopya vapur silindi.';
+      }
+    }
+
+    btnAddVapur2.addEventListener('click', addVapur2Instance);
+    btnDelVapur2.addEventListener('click', deleteActiveVapur2);
+
+    // Transform Gizmo Mode Switching
+    btnTranslate.addEventListener('click', () => setGizmoMode('translate'));
+    btnRotate.addEventListener('click', () => setGizmoMode('rotate'));
+    btnScale.addEventListener('click', () => setGizmoMode('scale'));
+
+    function setGizmoMode(mode) {
+      transformControl.setMode(mode);
+      btnTranslate.classList.toggle('active', mode === 'translate');
+      btnRotate.classList.toggle('active', mode === 'rotate');
+      btnScale.classList.toggle('active', mode === 'scale');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'w' || e.key === 'W') setGizmoMode('translate');
+      if (e.key === 'e' || e.key === 'E') setGizmoMode('rotate');
+      if (e.key === 'r' || e.key === 'R') setGizmoMode('scale');
+    });
+
+    // Click to Place Mode
+    btnPlaceMode.addEventListener('click', () => {
+      clickToPlaceMode = !clickToPlaceMode;
+      btnPlaceMode.innerText = clickToPlaceMode ? '🎯 Haritaya Tıklayarak Konumlandır: AÇIK' : '🎯 Haritaya Tıklayarak Konumlandır: KAPALI';
+      btnPlaceMode.style.background = clickToPlaceMode ? '#10b981' : '#3b82f6';
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('pointerdown', (e) => {
+      if (!clickToPlaceMode) return;
+      if (e.target.closest('#editor-panel') || e.target.closest('#hint-bar')) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      if (!terrainMesh) return;
+
+      const hits = raycaster.intersectObject(terrainMesh, true);
+      if (hits.length > 0) {
+        const p = hits[0].point;
+        const item = modelsData[activeKey];
+        if (item && item.group) {
+          item.group.position.set(p.x, p.y, p.z);
+          syncUIFromActiveModel();
+          updateExportText();
+        }
+      }
+    });
+
+    // Sync UI from 3D model
+    function syncUIFromActiveModel() {
+      const item = modelsData[activeKey];
+      if (!item || !item.group) return;
+
+      const p = item.group.position;
+      sliderX.value = numX.value = Math.round(p.x);
+      sliderY.value = numY.value = Math.round(p.y);
+      sliderZ.value = numZ.value = Math.round(p.z);
+
+      const deg = Math.round((item.group.rotation.y * 180 / Math.PI) % 360 + 360) % 360;
+      sliderRot.value = numRot.value = deg;
+
+      const sc = Number(item.group.scale.x.toFixed(2));
+      sliderScale.value = numScale.value = sc;
+    }
+
+    // Sync 3D model from UI inputs
+    function syncActiveModelFromUI() {
+      const item = modelsData[activeKey];
+      if (!item || !item.group) return;
+
+      item.group.position.x = parseFloat(numX.value) || 0;
+      item.group.position.y = parseFloat(numY.value) || 0;
+      item.group.position.z = parseFloat(numZ.value) || 0;
+
+      const deg = parseFloat(numRot.value) || 0;
+      item.group.rotation.y = (deg * Math.PI) / 180;
+
+      const sc = Math.max(0.001, parseFloat(numScale.value) || 1);
+      item.group.scale.set(sc, sc, sc);
+
+      updateExportText();
+    }
+
+    // Slider <-> Number input bindings
+    function bindInput(slider, num) {
+      slider.addEventListener('input', () => { num.value = slider.value; syncActiveModelFromUI(); });
+      num.addEventListener('input', () => { slider.value = num.value; syncActiveModelFromUI(); });
+    }
+    bindInput(sliderX, numX);
+    bindInput(sliderY, numY);
+    bindInput(sliderZ, numZ);
+    bindInput(sliderRot, numRot);
+    bindInput(sliderScale, numScale);
+
+    // Export generation
+    function updateExportText() {
+      const result = {};
+      Object.keys(modelsData).forEach((k) => {
+        const item = modelsData[k];
+        if (item.group) {
+          const deg = Math.round((item.group.rotation.y * 180 / Math.PI) % 360 + 360) % 360;
+          result[k] = {
+            pos: [
+              Math.round(item.group.position.x),
+              Math.round(item.group.position.y),
+              Math.round(item.group.position.z)
+            ],
+            rotY_deg: deg,
+            scale: Number(item.group.scale.x.toFixed(2))
+          };
+        }
+      });
+
+      exportText.innerText = JSON.stringify(result, null, 2);
+    }
+
+    // Copy to clipboard
+    btnCopy.addEventListener('click', () => {
+      const text = exportText.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Tüm obje koordinatları panoya kopyalandı! Şimdi sohbete yapıştırabilirsin:\n\n' + text);
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      orbit.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>

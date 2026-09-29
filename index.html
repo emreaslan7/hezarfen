@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hezarfen: Galata'dan Üsküdar'a</title>
+  
+  <!-- Google Fonts: Schoolbell -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css?v=203">
+</head>
+<body>
+
+  <div id="overlay">
+    <!-- Giant Vertical Title on Left Center -->
+    <div class="vertical-hero-title" aria-label="HEZARFEN">
+      <span>H</span>
+      <span>E</span>
+      <span>Z</span>
+      <span>A</span>
+      <span>R</span>
+      <span>F</span>
+      <span>E</span>
+      <span>N</span>
+    </div>
+
+    <div class="menu-container">
+      <div id="briefing-panel">
+        <div class="hero-tag">1632 • İSTANBUL</div>
+        <p class="hero-desc">Galata Kulesi ➔ Üsküdar Doğancılar (3.300 m)</p>
+        <div class="menu-actions">
+          <a href="game.html?mode=camera" class="btn-start btn-hero">🦅 HEZARFEN GİBİ UÇ (KAMERA İLE)</a>
+          <a href="game.html?mode=keyboard" class="btn-secondary">⌨️ KLAVYE İLE UÇ (SPACE)</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Quick launch to keyboard flight on Space or Enter key
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        window.location.href = 'game.html?mode=keyboard';
+      }
+    });
+  </script>
+</body>
+</html>
