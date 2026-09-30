@@ -10,23 +10,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=203">
+  <link rel="stylesheet" href="css/style.css?v=204">
+
+  <!-- Three.js Module Import -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
 
   <div id="overlay">
-    <!-- Giant Vertical Title on Left Center -->
-    <div class="vertical-hero-title" aria-label="HEZARFEN">
-      <span>H</span>
-      <span>E</span>
-      <span>Z</span>
-      <span>A</span>
-      <span>R</span>
-      <span>F</span>
-      <span>E</span>
-      <span>N</span>
-    </div>
-
     <div class="menu-container">
       <div id="briefing-panel">
         <div class="hero-tag">1632 • İSTANBUL</div>
@@ -39,7 +37,17 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initFlyingBird3D } from './js/components/flying-bird-3d.js?v=230';
+
+    // Standalone 3D Flying Hezarfen & Glowing Path Component
+    initFlyingBird3D({
+      container: document.getElementById('overlay'),
+      pathColor: '#a855f7',
+      speed: 1.0,
+      modelUrl: './scenes/hezarfen_opt.glb'
+    });
+
     // Quick launch to keyboard flight on Space or Enter key
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space' || e.code === 'Enter') {
