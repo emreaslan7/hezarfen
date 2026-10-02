@@ -45,42 +45,24 @@ export function initFlyingBird3D(options = {}) {
   sunLight.position.set(6, 10, 8);
   scene.add(sunLight);
 
-  const pathLight = new THREE.PointLight(pathColor, 3.2, 10);
-  scene.add(pathLight);
+  scene.add(new THREE.PointLight('#ffffff', 0.2, 10));
 
-  // --- Open Arc Flight Path (sol → sağ, gentle S-eğrisi) ---
-  // closed=false → teleport geri sola, no spinning loop
+  // --- Smooth S-shaped closed loop (original points, auto-closed) ---
   const flightCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-11.0,  0.5, -4.0),
-    new THREE.Vector3( -6.5,  2.8, -3.2),
-    new THREE.Vector3( -1.5,  1.8, -4.8),
-    new THREE.Vector3(  3.5,  0.2, -3.5),
-    new THREE.Vector3(  8.0,  1.6, -4.2),
-    new THREE.Vector3( 12.0,  0.8, -3.8),
-  ], false, 'centripetal', 0.5);
+    new THREE.Vector3(-11.0, 3.5, -4.0),
+    new THREE.Vector3(-6.5, 3.8, -3.2),
+    new THREE.Vector3(-1.5, 3.6, -4.8),
+    new THREE.Vector3(3.5, 3.4, -3.5),
+    new THREE.Vector3(8.0, 3.7, -4.2),
+    new THREE.Vector3(12.0, 3.5, -3.8),
+  ], true, 'centripetal', 0.5);
 
-  // Glowing neon path tube (sadece görünür segment - open)
-  const tubeGeo  = new THREE.TubeGeometry(flightCurve, 160, 0.038, 8, false);
-  const tubeMat  = new THREE.MeshBasicMaterial({ color: new THREE.Color(pathColor), transparent: true, opacity: 0.50, blending: THREE.AdditiveBlending });
+  const tubeMat = new THREE.MeshStandardMaterial({ color: '#a855f7', emissive: '#a855f7', emissiveIntensity: 0.7, transparent: true, opacity: 0 });
+  const haloMat = new THREE.MeshStandardMaterial({ color: '#e879f9', emissive: '#e879f9', emissiveIntensity: 1.2, transparent: true, opacity: 0, depthWrite: false });
+  const tubeGeo = new THREE.TubeGeometry(flightCurve, 60, 0.06, 8, false);
+  const haloGeo = new THREE.TubeGeometry(flightCurve, 60, 0.18, 8, false);
   scene.add(new THREE.Mesh(tubeGeo, tubeMat));
-
-  const haloGeo  = new THREE.TubeGeometry(flightCurve, 80, 0.11, 6, false);
-  const haloMat  = new THREE.MeshBasicMaterial({ color: new THREE.Color(pathColor), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending });
   scene.add(new THREE.Mesh(haloGeo, haloMat));
-
-  // Sparkle particles along path
-  const NUM_PTS = 40;
-  const pPositions = new Float32Array(NUM_PTS * 3);
-  for (let i = 0; i < NUM_PTS; i++) {
-    const pt = flightCurve.getPointAt(i / (NUM_PTS - 1));
-    pPositions[i * 3]     = pt.x + (Math.random() - 0.5) * 0.18;
-    pPositions[i * 3 + 1] = pt.y + (Math.random() - 0.5) * 0.18;
-    pPositions[i * 3 + 2] = pt.z + (Math.random() - 0.5) * 0.18;
-  }
-  const pGeo = new THREE.BufferGeometry();
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
-  const pMat = new THREE.PointsMaterial({ color: new THREE.Color(pathColor), size: 0.075, transparent: true, opacity: 0.70, blending: THREE.AdditiveBlending });
-  scene.add(new THREE.Points(pGeo, pMat));
 
   // --- Hezarfen Model ---
   const flightGroup = new THREE.Group();
@@ -90,9 +72,9 @@ export function initFlyingBird3D(options = {}) {
   let hezarfenModel = null;
 
   // Pre-alloc - zero GC per frame
-  const _tempQ  = new THREE.Quaternion();
-  const _axisR  = new THREE.Vector3();
-  const _axisL  = new THREE.Vector3();
+  const _tempQ = new THREE.Quaternion();
+  const _axisR = new THREE.Vector3();
+  const _axisL = new THREE.Vector3();
   const _tangent = new THREE.Vector3();
   const _charFwd = new THREE.Vector3();
 
@@ -104,7 +86,7 @@ export function initFlyingBird3D(options = {}) {
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     model.position.x -= center.x;
-    model.position.z -= center.z;
+    model.position.z -= box.min.z;
     model.position.y -= box.min.y;
 
     // Prone flight stance
@@ -113,15 +95,15 @@ export function initFlyingBird3D(options = {}) {
     model.traverse((child) => {
       if (!child.isBone) return;
       child.userData.baseQuat = child.quaternion.clone();
-      if (child.name.includes('LeftArm')  && !child.name.includes('Fore')) bones.leftArm      = child;
-      if (child.name.includes('RightArm') && !child.name.includes('Fore')) bones.rightArm     = child;
-      if (child.name.includes('LeftHandMiddle4')  || (child.name.includes('LeftHand')  && !bones.leftWingTip))  bones.leftWingTip  = child;
+      if (child.name.includes('LeftArm') && !child.name.includes('Fore')) bones.leftArm = child;
+      if (child.name.includes('RightArm') && !child.name.includes('Fore')) bones.rightArm = child;
+      if (child.name.includes('LeftHandMiddle4') || (child.name.includes('LeftHand') && !bones.leftWingTip)) bones.leftWingTip = child;
       if (child.name.includes('RightHandMiddle4') || (child.name.includes('RightHand') && !bones.rightWingTip)) bones.rightWingTip = child;
     });
 
     hezarfenModel = model;
     flightGroup.add(model);
-    flightGroup.scale.setScalar(0.72);
+    flightGroup.scale.setScalar(0.85);
   }, undefined, (err) => {
     console.warn('Hezarfen model yüklenemedi:', err);
   });
@@ -129,7 +111,7 @@ export function initFlyingBird3D(options = {}) {
   // --- Mouse Parallax ---
   const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
   function onMouseMove(e) {
-    mouse.tx = (e.clientX / innerWidth)  * 2 - 1;
+    mouse.tx = (e.clientX / innerWidth) * 2 - 1;
     mouse.ty = -(e.clientY / innerHeight) * 2 + 1;
   }
   window.addEventListener('mousemove', onMouseMove);
@@ -148,14 +130,14 @@ export function initFlyingBird3D(options = {}) {
   let animId = null;
 
   // Flight orientation helpers
-  const _UP    = new THREE.Vector3(0, 1, 0);
+  const _UP = new THREE.Vector3(0, 1, 0);
   const _RIGHT = new THREE.Vector3(1, 0, 0);
 
   function animate() {
     animId = requestAnimationFrame(animate);
 
     const delta = clock.getDelta();
-    const t     = clock.getElapsedTime() * speed;
+    const t = clock.getElapsedTime() * speed;
 
     // Camera parallax sway
     mouse.x += (mouse.tx - mouse.x) * 0.05;
@@ -164,29 +146,24 @@ export function initFlyingBird3D(options = {}) {
     camera.position.y = 0.4 + mouse.y * 1.0;
     camera.lookAt(0, 0, -4.0);
 
-    // Progress along open arc — pingpong so it never teleports jarringly
-    // 0→1 sol-sağ, 1→0 sağ-sol (arka planda geri döner, görünmez tarafta)
-    const rawT  = (t * 0.055) % 2.0;          // tam tur süresi ~18 saniye
-    const loopT = rawT < 1.0 ? rawT : 2.0 - rawT; // pingpong [0..1..0]
+    // Continuous forward loop — teleport to start on arrival (no sudden reverse turn)
+    const tLoop = (t * 0.055) % 1.0;         // 0→1 sol-sağ, sonra tekrar başa (teleport)
+    const loopT = tLoop;                     // always going right
 
     flightCurve.getPointAt(loopT, flightGroup.position);
     flightCurve.getTangentAt(loopT, _tangent);
-
-    // Gidiş yönüne göre modeli çevir (sağa = normal, sola = ters)
-    const goingRight = rawT < 1.0;
-    const sign = goingRight ? 1.0 : -1.0;
 
     // Basit ve kararlı yönelim:
     // Y ekseni etrafında ilerleme yönüne bak (sadece yatay)
     // X ekseni etrafında eğim (hafif burun yukarı/aşağı)
     // Z ekseninde banka OLMADAN — sade süzülüş
-    const yaw   = Math.atan2(_tangent.x * sign, _tangent.z * sign);
+    const yaw = Math.atan2(_tangent.x, _tangent.z); // always forward-facing, no sign flip
     const pitch = _tangent.y * 0.5;            // hafif eğim, max ±0.5 rad
 
     flightGroup.rotation.order = 'YXZ';
     flightGroup.rotation.set(pitch, yaw + Math.PI, 0.0);
 
-    pathLight.position.copy(flightGroup.position);
+
 
     // --- Süzülme Kanat Animasyonu ---
     // Yavaş sinüs: 1.4 Hz, küçük genlik → hava üstünde süzülüş hissi
@@ -218,8 +195,8 @@ export function initFlyingBird3D(options = {}) {
     }
 
     // Path pulse
-    tubeMat.opacity = 0.40 + Math.sin(t * 2.2) * 0.14;
-    haloMat.opacity = 0.14 + Math.sin(t * 2.2) * 0.06;
+    tubeMat.opacity = 0;
+    haloMat.opacity = 0;
 
     renderer.render(scene, camera);
   }
@@ -235,7 +212,7 @@ export function initFlyingBird3D(options = {}) {
       renderer.dispose();
       tubeGeo.dispose(); tubeMat.dispose();
       haloGeo.dispose(); haloMat.dispose();
-      pGeo.dispose();    pMat.dispose();
+      pGeo.dispose(); pMat.dispose();
     }
   };
 }
