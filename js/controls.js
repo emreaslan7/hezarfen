@@ -1,5 +1,5 @@
 import { STATE, UI } from './state.js';
-import { poseState, startCamera } from './pose.js';
+import { poseState, startCamera, stopCamera } from './pose.js';
 import { assetsReadyPromise } from './scene.js';
 import { initWindAudio } from './audio.js';
 
@@ -38,23 +38,53 @@ export async function startGame(useCamera = false) {
   STATE.started = true;
   STATE.flapImpulse = 5.0; // Strong initial takeoff leap into the wind
   STATE.flapTime = 0.52;   // Triggers fluid organic wing flap on leap off balcony
+
+  // Control hints fade out 6s into the flight (hover to bring back);
+  // updateHUD un-fades them whenever STATE.started is false (restart/reset).
+  if (UI.hudControls) {
+    UI.hudControls.classList.remove('faded');
+    clearTimeout(UI.hudControls._fadeTimer);
+    UI.hudControls._fadeTimer = setTimeout(() => UI.hudControls.classList.add('faded'), 6000);
+  }
 }
 
 // Menu Action Listeners
+function showCalibError(message) {
+  if (!UI.calibError) return;
+  if (!message) {
+    UI.calibError.style.display = 'none';
+    UI.calibError.innerText = '';
+    return;
+  }
+  UI.calibError.innerText = message;
+  UI.calibError.style.display = 'block';
+}
+
 if (UI.btnCameraMode) {
   UI.btnCameraMode.addEventListener('click', async () => {
     if (UI.briefingPanel) UI.briefingPanel.style.display = 'none';
     if (UI.calibPanel) UI.calibPanel.style.display = 'block';
+    showCalibError(null);
     poseState.isCalibrating = true;
 
     try {
       await startCamera();
     } catch (err) {
       console.error("Camera access failed:", err);
-      alert("Kameraya erişilemedi! Lütfen tarayıcı izinlerinden kamerayı açın.");
-      if (UI.calibPanel) UI.calibPanel.style.display = 'none';
-      if (UI.briefingPanel) UI.briefingPanel.style.display = 'block';
       poseState.isCalibrating = false;
+      showCalibError(
+        'Kameraya erişilemedi. Tarayıcı adres çubuğundaki kamera simgesinden izni aç, ' +
+        'sonra "Geri" ile tekrar dene. Sayfa yalnızca https:// veya localhost üzerinden çalışır.'
+      );
+      if (UI.calibStartBtn) {
+        UI.calibStartBtn.disabled = true;
+        UI.calibStartBtn.innerText = 'KAMERA ERİŞİMİ YOK';
+      }
+      if (UI.badgeStatus) {
+        UI.badgeStatus.classList.remove('active');
+        const span = UI.badgeStatus.querySelector('span:last-child');
+        if (span) span.innerText = 'Duruş: Kamera Kapalı';
+      }
     }
   });
 }
@@ -64,13 +94,23 @@ if (UI.calibBackBtn) {
     if (UI.calibPanel) UI.calibPanel.style.display = 'none';
     if (UI.briefingPanel) UI.briefingPanel.style.display = 'block';
     poseState.isCalibrating = false;
+    poseState.isPaired = false;
+    isCalibratingCountdown = false;
+    // Kamerayı da kapat: kullanıcı menüye döndüğünde cihaz ışığı yanmasın
+    stopCamera();
+    if (UI.calibStartBtn) {
+      UI.calibStartBtn.disabled = true;
+      UI.calibStartBtn.innerText = 'DURUŞ BEKLENİYOR...';
+      UI.calibStartBtn.classList.remove('btn-hero');
+    }
+    showCalibError(null);
   });
 }
 
 let isCalibratingCountdown = false;
 
 export function triggerBodyPairing() {
-  if (isCalibratingCountdown || poseState.isPaired) return;
+  if (isCalibratingCountdown || poseState.isPaired || !poseState.isCalibrating) return;
   isCalibratingCountdown = true;
 
   if (UI.calibStartBtn) {
@@ -87,6 +127,13 @@ export function triggerBodyPairing() {
 
   let sec = 2;
   const timer = setInterval(() => {
+    // Geri'e basılırsa geri sayım iptal olsun
+    if (!poseState.isCalibrating) {
+      clearInterval(timer);
+      clearInterval(sampleInterval);
+      isCalibratingCountdown = false;
+      return;
+    }
     sec--;
     if (sec > 0) {
       if (UI.calibStartBtn) UI.calibStartBtn.innerText = `DİK DURUN (${sec})...`;
@@ -126,6 +173,8 @@ if (UI.calibStartBtn) {
 
 if (UI.btnKeyboardMode) {
   UI.btnKeyboardMode.addEventListener('click', () => {
+    // Klavye moduna geçiyorsan kamera akışını ve kalibrasyon durumunu temizle
+    if (poseState.active || poseState.isCalibrating) stopCamera();
     if (UI.overlay) UI.overlay.classList.add('hidden');
     if (UI.hud) UI.hud.style.display = 'flex';
     if (UI.toast) {
@@ -186,7 +235,8 @@ window.addEventListener('keydown', (e) => {
         startGame(true);
       }
     } else if (!poseState.isCalibrating && (e.code === 'Space' || e.code === 'Enter')) {
-      startGame(false);
+      // Çarpışma/yeniden başlatma sonrası: kamera modundaysak klavye moduna düşme
+      startGame(poseState.active);
     }
   }
 

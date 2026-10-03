@@ -3,3 +3,8 @@ Thumbs.db
 *.tmp
 .vscode/
 .idea/
+
+.agents/
+.cursorrules/
+.cursor/
+.freebuff/

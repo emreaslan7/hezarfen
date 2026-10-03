@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hezarfen: Galata'dan Üsküdar'a</title>
-  
+
   <!-- Google Fonts: Schoolbell -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=204">
+  <link rel="stylesheet" href="css/style.css?v=212">
 
   <!-- Three.js Module Import -->
   <script type="importmap">
@@ -22,16 +23,42 @@
     }
   </script>
 </head>
+
 <body>
+
+  <div id="bird-stage"></div>
 
   <div id="overlay">
     <div class="menu-container">
       <div id="briefing-panel">
-        <div class="hero-tag">1632 • İSTANBUL</div>
-        <p class="hero-desc">Galata Kulesi ➔ Üsküdar Doğancılar (3.300 m)</p>
-        <div class="menu-actions">
-          <a href="game.html?mode=camera" class="btn-start btn-hero">🦅 HEZARFEN GİBİ UÇ (KAMERA İLE)</a>
-          <a href="game.html?mode=keyboard" class="btn-secondary">⌨️ KLAVYE İLE UÇ (SPACE)</a>
+        <div class="split-showcase" id="split-showcase">
+
+          <a class="split-card" href="game.html?mode=camera" data-shift="-12"
+             aria-label="Kamera modu — web kamerayla vücut takibi ile uç">
+            <span class="split-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.2a2 2 0 0 0 1.6-.8l.7-.9a2 2 0 0 1 1.6-.8h3.8a2 2 0 0 1 1.6.8l.7.9a2 2 0 0 0 1.6.8h1.2A2.5 2.5 0 0 1 21 8.5v7A2.5 2.5 0 0 1 18.5 18h-13A2.5 2.5 0 0 1 3 15.5v-7Z" />
+                <circle cx="12" cy="12" r="3.4" />
+              </svg>
+            </span>
+            <span class="split-card__desc">Kol ve omuz hareketlerini takip et, hezarfeni sen uçur.</span>
+          </a>
+
+          <a class="split-card" href="game.html?mode=keyboard" data-shift="12"
+             aria-label="Klavye modu — tuşlarla uç">
+            <span class="split-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2.5" y="6" width="19" height="12" rx="2.2" />
+                <path d="M7 10h.01M11 10h.01M15 10h.01M17.5 10h.01M7 13.6h.01M19 13.6h.01M9.6 13.6h4.8" />
+              </svg>
+            </span>
+            <span class="split-card__desc">Klavye ile süzül, rüzgârı yönet ve Boğaz'ı geç.</span>
+          </a>
+
+          <span class="split-divider" aria-hidden="true"></span>
+
         </div>
       </div>
     </div>
@@ -39,21 +66,22 @@
 
   <script type="module">
     import { initFlyingBird3D } from './js/components/flying-bird-3d.js?v=230';
+    import { initSplitShowcase } from './js/split-showcase.js?v=1';
+    import { initSquigglyText } from './js/components/squiggly-text.js?v=1';
 
     // Standalone 3D Flying Hezarfen & Glowing Path Component
     initFlyingBird3D({
-      container: document.getElementById('overlay'),
+      container: document.getElementById('bird-stage'),
       pathColor: '#a855f7',
       speed: 0.5,
       modelUrl: './scenes/hezarfen_opt.glb'
     });
 
-    // Quick launch to keyboard flight on Space or Enter key
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' || e.code === 'Enter') {
-        window.location.href = 'game.html?mode=keyboard';
-      }
-    });
+    initSplitShowcase();
+
+    // Squiggly HEZARFEN title floating in the flight sky
+    initSquigglyText({ text: 'HEZARFEN' });
   </script>
 </body>
+
 </html>

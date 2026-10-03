@@ -24,16 +24,27 @@ let cachedLandmarks = null;
 let lastVideoTime = -1;
 
 // Initialize MediaPipe Pose with Lite model (0 = high-speed real-time, zero freeze)
-const pose = new Pose({
-  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-});
+// CDN erişilemezse global `Pose` tanımsız olur; o durumda modülün geri kalanı
+// patlamasın diye pose = null bırakılır ve startCamera anlamlı bir hata fırlatır.
+let pose = null;
+try {
+  if (typeof globalThis.Pose !== 'function') {
+    throw new Error('MediaPipe Pose globali bulunamadı (CDN yüklemesi başarısız?)');
+  }
+  pose = new globalThis.Pose({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+  });
 
-pose.setOptions({
-  modelComplexity: 0, // 0 = Lite (Ultra-fast, smooth 60fps, no frame drops)
-  smoothLandmarks: true,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5
-});
+  pose.setOptions({
+    modelComplexity: 0, // 0 = Lite (Ultra-fast, smooth 60fps, no frame drops)
+    smoothLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+} catch (err) {
+  pose = null;
+  console.error('MediaPipe Pose başlatılamadı:', err);
+}
 
 // Render upper-body skeleton with glow
 function drawSkeleton(ctx, canvas, lm, isReady) {
@@ -96,7 +107,7 @@ function drawSkeleton(ctx, canvas, lm, isReady) {
 }
 
 // MediaPipe Pose processing callback
-pose.onResults((results) => {
+function handlePoseResults(results) {
   if (!results.poseLandmarks) {
     cachedLandmarks = null;
     if (poseState.isCalibrating) updateCalibrationBadgeUI(null);
@@ -203,7 +214,11 @@ pose.onResults((results) => {
     // Falcon dive posture: wrists tucked lower than chest/hips
     poseState.isDiving = avgWristY > avgShoulderY + 0.18;
   }
-});
+}
+
+if (pose) {
+  pose.onResults(handlePoseResults);
+}
 
 function updateCalibrationBadgeUI(data) {
   if (!data) {
@@ -267,6 +282,12 @@ function updateCalibrationBadgeUI(data) {
 
 // Start webcam stream using native browser getUserMedia + 60fps decoupled render loop
 export async function startCamera() {
+  if (!pose) {
+    throw new Error('MediaPipe Pose yüklenemedi — kamera modu kullanılamıyor.');
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error('Bu tarayıcı kamera erişimini desteklemiyor.');
+  }
   if (!mediaStream) {
     mediaStream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
@@ -321,7 +342,14 @@ export function stopCamera() {
     mediaStream = null;
   }
   isCameraRunning = false;
+  // Kalan kare/işaretçi durumunu temizle ki yeniden kamera açıldığında
+  // takılı kalmış bir "işleniyor" bayrağı çıkarımı dondurmasın
+  isProcessingFrame = false;
+  cachedLandmarks = null;
+  lastVideoTime = -1;
   poseState.active = false;
   poseState.isCalibrating = false;
   poseState.isPaired = false;
+  poseState.isBodyReady = false;
+  poseState.roll = 0;
 }

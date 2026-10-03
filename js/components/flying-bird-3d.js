@@ -212,7 +212,6 @@ export function initFlyingBird3D(options = {}) {
       renderer.dispose();
       tubeGeo.dispose(); tubeMat.dispose();
       haloGeo.dispose(); haloMat.dispose();
-      pGeo.dispose(); pMat.dispose();
     }
   };
 }

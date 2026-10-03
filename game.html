@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=206">
+  <link rel="stylesheet" href="css/style.css?v=212">
 
   <!-- MediaPipe Pose & Camera Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -47,15 +47,15 @@
     <div class="hud-stats">
       <div class="stat-item">
         <span class="stat-label">İrtifa</span>
-        <span class="stat-val alt" id="val-alt">185 m</span>
+        <span class="stat-val" id="val-alt">185 m</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Hız</span>
-        <span class="stat-val" id="val-spd">150 km/s</span>
+        <span class="stat-val" id="val-spd">150 km/h</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Mesafe</span>
-        <span class="stat-val dist" id="val-dist">3300 m</span>
+        <span class="stat-val" id="val-dist">3300 m</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Yatış</span>
@@ -63,7 +63,12 @@
         <div id="attitude-bar"><div id="attitude-fill"></div></div>
       </div>
     </div>
-    <div style="font-size: 11px; color: #8b949e; background: rgba(13,17,23,0.85); padding: 6px 12px; border-radius: 4px; border: 1px solid #30363d; margin-top: 2px;">
+    <div class="route-bar" aria-hidden="true">
+      <span class="route-endpoint">🗼 GALATA</span>
+      <div class="route-track"><div class="route-marker" id="route-marker"></div></div>
+      <span class="route-endpoint">ÜSKÜDAR 🏁</span>
+    </div>
+    <div class="hud-controls" id="hud-controls">
       [A/D] YATIŞ &nbsp;|&nbsp; [W/S] DALIŞ/TIRMANIŞ &nbsp;|&nbsp; [SPACE] KANAT ÇIRP &nbsp;|&nbsp; [MOUSE] ETRAFA BAK &nbsp;|&nbsp; [R] SIFIRLA
     </div>
   </div>
@@ -82,11 +87,13 @@
       <!-- Panel 1: Mode Selection (if opened directly without ?mode=) -->
       <div id="briefing-panel">
         <div class="hero-tag">1632 • İSTANBUL</div>
+        <h2 class="hero-title">Hezarfen</h2>
         <p class="hero-desc">Galata Kulesi ➔ Üsküdar Doğancılar (3.300 m)</p>
         <div class="menu-actions">
-          <button class="btn-start btn-hero" id="btn-camera-mode">🦅 HEZARFEN GİBİ UÇ (KAMERA İLE)</button>
-          <button class="btn-secondary" id="btn-keyboard-mode">⌨️ KLAVYE İLE UÇ (SPACE)</button>
+          <button class="btn-start btn-hero" id="btn-camera-mode">🦅 KAMERA</button>
+          <button class="btn-secondary" id="btn-keyboard-mode">⌨️ KLAVYE</button>
         </div>
+        <p class="hero-desc" style="margin:14px 0 0;font-size:11px;">Kamera modunda kollarınla kanatları yönetirsin · Her iki modda da <b>SPACE</b> uçuşu başlatır</p>
       </div>
 
       <!-- Panel 2: Camera Test & Upper Body Calibration -->
@@ -95,6 +102,7 @@
           <h2>🦅 Kamera & Gövde Ayarı</h2>
           <div class="calib-subdesc">Kameraya geçin ve kollarınızı iki yana açarak Hezarfen duruşunu alın.</div>
         </div>
+        <div class="calib-error" id="calib-error" style="display:none;margin-bottom:10px;padding:9px 12px;border-radius:6px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;font-size:12px;line-height:1.4;"></div>
         <div class="calib-feed-container">
           <canvas id="calib-canvas"></canvas>
           <div class="calib-crosshair"></div>
@@ -145,6 +153,6 @@
 
   <canvas id="canvas3d"></canvas>
 
-  <script type="module" src="js/main.js?v=228"></script>
+  <script type="module" src="js/main.js?v=230"></script>
 </body>
 </html>
